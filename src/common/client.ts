@@ -85,7 +85,7 @@ export const setCustomSuiClient = (suiClient: SuiClient) => {
 };
 
 export function getMultiObjects(
-  input: MultiGetObjectsParams
+  input: MultiGetObjectsParams,
 ): Promise<SuiObjectResponse[]> {
   const suiClient = getSuiClient();
   const res = suiClient.multiGetObjects(input);
