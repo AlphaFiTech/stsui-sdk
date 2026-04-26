@@ -9,6 +9,7 @@ dist/
 .env
 /scripts/**/*.js
 /scripts/.env
+/scripts/snapshots/
 client_id
 settings.dat
 pending/
