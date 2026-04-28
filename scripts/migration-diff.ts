@@ -60,6 +60,14 @@ const NOISE_SUFFIXES = new Set<string>([
   "totalBalance",
   "balance",
   "coinObjectCount",
+  // validator stake accumulators inside getMultiObjects(LST_INFO) projections
+  "pool_token_amount",
+  "sui_amount",
+  "inactive_stake",
+  "active_stake",
+  "extra_sui_amount",
+  "rewards_pool",
+  "validator_infos",
   // pyth (live oracle)
   "price",
   // event-window noise

@@ -43,6 +43,7 @@ import {
   getLstInfo,
   getMeta,
   getMultiObjects,
+  multiGetObjectsGraphql,
   stStuiCirculationSupply,
   stSuiExchangeRate,
   // tx builder free functions
@@ -361,7 +362,7 @@ async function main() {
   );
 
   await step(
-    "[reads] getMultiObjects([LST_INFO, META_OBJECT])",
+    "[reads] getMultiObjects([LST_INFO, META_OBJECT])  (legacy JSON-RPC)",
     () =>
       getMultiObjects({
         ids: [LST_INFO_ID, META_OBJECT_ID],
@@ -377,6 +378,17 @@ async function main() {
         return extractMultiObject(wrap?.data ?? wrap);
       });
       writeSnapshot(outDir, "getMultiObjects-2", projected);
+    },
+  );
+
+  await step(
+    "[reads] multiGetObjectsGraphql([LST_INFO, META_OBJECT])  (new GraphQL)",
+    () => multiGetObjectsGraphql([LST_INFO_ID, META_OBJECT_ID]),
+    (objs) => {
+      const projected = (objs as unknown[]).map((r) =>
+        extractMultiObject(asObj(r)),
+      );
+      writeSnapshot(outDir, "multiGetObjectsGraphql-2", projected);
     },
   );
 

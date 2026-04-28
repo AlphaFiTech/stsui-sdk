@@ -95,7 +95,7 @@ export async function getObjectFlat<T = Record<string, unknown>>(
  * Fetch many objects' flat fields by id. Preserves the order of input ids;
  * objects that don't exist or aren't Move objects appear as `null`.
  */
-export async function multiGetObjectsFlat(
+export async function multiGetObjectsGraphql(
   ids: string[],
 ): Promise<(FlatObject | null)[]> {
   if (ids.length === 0) return [];
@@ -111,7 +111,7 @@ export async function multiGetObjectsFlat(
     } | null>;
   }>({
     query: /* GraphQL */ `
-      query multiGetObjectsFlat($keys: [ObjectKey!]!) {
+      query multiGetObjectsGraphql($keys: [ObjectKey!]!) {
         multiGetObjects(keys: $keys) {
           address
           version

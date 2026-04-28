@@ -9,8 +9,14 @@
  * SuiClient for their own purposes — but are marked `@deprecated`.
  */
 
-import { getFullnodeUrl, SuiClient } from "@mysten/sui/client";
-import { multiGetObjectsFlat, type FlatObject } from "./blockchain.js";
+import {
+  getFullnodeUrl,
+  MultiGetObjectsParams,
+  SuiClient,
+  SuiObjectResponse,
+} from "@mysten/sui/client";
+
+export { multiGetObjectsGraphql, type FlatObject } from "./blockchain.js";
 
 // Lazy initialization for the SuiClient instance
 let suiClientInstance: SuiClient | undefined = undefined;
@@ -95,20 +101,18 @@ export const setCustomSuiClient = (suiClient: SuiClient) => {
 };
 
 /**
- * Batch fetch flat shapes for the given object ids.
+ * Batch fetch JSON-RPC `SuiObjectResponse` shapes for the given object ids.
  *
- * v0.1.x note: previously returned `SuiObjectResponse[]` (the JSON-RPC
- * shape). Now returns `(FlatObject | null)[]` — flat fields with
- * `objectId / version / digest / type / fields`. See
- * STSUI_GRAPHQL_MIGRATION.md for the field-by-field mapping.
- *
- * The `options` parameter is preserved for source-compat with the old
- * `MultiGetObjectsParams` signature but is ignored — GraphQL always
- * includes contents.
+ * @deprecated v0.1.x of the SDK migrated all internal reads to GraphQL.
+ *   This helper still uses `SuiClient.multiGetObjects` so existing
+ *   callers remain source-compatible. New code should call
+ *   `multiGetObjectsGraphql(ids)` (re-exported from this module), which
+ *   returns the GraphQL-native flat object shape
+ *   `{ objectId, version, digest, type, fields }`.
  */
-export async function getMultiObjects(input: {
-  ids: string[];
-  options?: unknown;
-}): Promise<(FlatObject | null)[]> {
-  return multiGetObjectsFlat(input.ids);
+export function getMultiObjects(
+  input: MultiGetObjectsParams,
+): Promise<SuiObjectResponse[]> {
+  const suiClient = getSuiClient();
+  return suiClient.multiGetObjects(input);
 }

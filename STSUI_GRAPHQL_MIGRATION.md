@@ -2,7 +2,11 @@
 
 `v0.1.x` of `@alphafi/stsui-sdk` migrates every internal Sui read from
 JSON-RPC to GraphQL. The public function/class signatures are unchanged
-except for **two breaking type-shape changes** documented below.
+except for **one breaking type-shape change** (the flat
+`LiquidStakingInfo` / `Meta` shapes documented below). All other
+JSON-RPC-shaped helpers, including `getMultiObjects`, retain their
+original return types and are merely marked `@deprecated`; new
+GraphQL-native variants are introduced under separate names.
 
 ## What changed
 
@@ -50,13 +54,25 @@ If you imported `LiquidStakingInfo` or `Meta` directly and navigated
 those fields, you'll need to drop the `.content` and intermediate
 `.fields` segments.
 
-### Breaking: `getMultiObjects` returns flat objects
+### Deprecated: `getMultiObjects` (kept for backward compatibility)
 
-`getMultiObjects({ ids })` previously returned `SuiObjectResponse[]`
-(JSON-RPC shape). It now returns `(FlatObject | null)[]` where
-`FlatObject` is `{ objectId, version, digest, type, fields }`. The
-`options` parameter is preserved for source compatibility but ignored —
-GraphQL always includes contents.
+`getMultiObjects({ ids, options })` continues to return
+`SuiObjectResponse[]` via JSON-RPC and is now marked `@deprecated`.
+Existing callers do not need any changes.
+
+For new code, prefer the GraphQL-native helper:
+
+```ts
+import { multiGetObjectsGraphql, FlatObject } from "@alphafi/stsui-sdk";
+
+const objects: (FlatObject | null)[] = await multiGetObjectsGraphql([
+  lstInfoId,
+  metaObjectId,
+]);
+```
+
+`FlatObject` is `{ objectId, version, digest, type, fields }`. Use
+`fields` directly (no `content.fields.*` wrapping).
 
 ### Fixed: `getWalletCoins` was returning `[]`
 
