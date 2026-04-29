@@ -1,5 +1,4 @@
 import {
-  getSuiClient,
   getConf,
   LiquidStakingInfo,
   FeeConfig,
@@ -12,6 +11,7 @@ import { bech32 } from "bech32";
 import { Ed25519Keypair } from "@mysten/sui/keypairs/ed25519";
 import { Transaction } from "@mysten/sui/transactions";
 import { SimpleCache } from "./simpleCache.js";
+import { getCurrentEpoch, getObjectFlat } from "./blockchain.js";
 
 export async function stSuiExchangeRate(
   lstInfoId: string,
@@ -23,10 +23,10 @@ export async function stSuiExchangeRate(
     return "0";
   }
   const totalSuiSupply = new Decimal(
-    lstInfo.content.fields.storage.fields.total_sui_supply.toString(),
-  ).minus(new Decimal(lstInfo.content.fields.accrued_spread_fees));
+    lstInfo.fields.storage.total_sui_supply.toString(),
+  ).minus(new Decimal(lstInfo.fields.accrued_spread_fees));
   const totalStSuiSupply = new Decimal(
-    lstInfo.content.fields.lst_treasury_cap.fields.total_supply.fields.value.toString(),
+    lstInfo.fields.lst_treasury_cap.total_supply.value.toString(),
   );
   if (totalStSuiSupply.eq(0)) {
     return "0";
@@ -60,16 +60,15 @@ export async function getLstInfo(
   }
   lstInfoPromise = (async () => {
     try {
-      const lstInfo = (
-        await getSuiClient().getObject({
-          id: lstInfoId,
-          options: {
-            showContent: true,
-          },
-        })
-      ).data as LiquidStakingInfo;
-
-      // Cache the investor object
+      const flat = await getObjectFlat<LiquidStakingInfo["fields"]>(lstInfoId);
+      if (!flat) return undefined;
+      const lstInfo: LiquidStakingInfo = {
+        objectId: flat.objectId,
+        version: flat.version,
+        digest: flat.digest,
+        type: flat.type,
+        fields: flat.fields,
+      };
       lsInfoCache.set(cacheKey, lstInfo);
       return lstInfo;
     } catch (e) {
@@ -87,15 +86,15 @@ export async function getLstInfo(
 }
 
 export async function getMeta(): Promise<Meta | undefined> {
-  const meta = (
-    await getSuiClient().getObject({
-      id: getConf().META_OBJECT,
-      options: {
-        showContent: true,
-      },
-    })
-  ).data as Meta;
-  return meta;
+  const flat = await getObjectFlat<Meta["fields"]>(getConf().META_OBJECT);
+  if (!flat) return undefined;
+  return {
+    objectId: flat.objectId,
+    version: flat.version,
+    digest: flat.digest,
+    type: flat.type,
+    fields: flat.fields,
+  };
 }
 
 export const stStuiCirculationSupply = async (
@@ -109,7 +108,7 @@ export const stStuiCirculationSupply = async (
       return "0";
     }
     const totalStSuiSupply = new Decimal(
-      lstInfo.content.fields.lst_treasury_cap.fields.total_supply.fields.value.toString(),
+      lstInfo.fields.lst_treasury_cap.total_supply.value.toString(),
     );
     const suiPrice = await getLatestPrices(["SUI/USD"], false);
     const stSuiExchRate = await stSuiExchangeRate(lstInfoId, ignoreCache);
@@ -137,8 +136,8 @@ export const fetchTotalSuiStaked = async (
       return "0";
     }
     const totalSuiStaked = new Decimal(
-      lstInfo.content.fields.storage.fields.total_sui_supply.toString(),
-    ).minus(new Decimal(lstInfo.content.fields.accrued_spread_fees));
+      lstInfo.fields.storage.total_sui_supply.toString(),
+    ).minus(new Decimal(lstInfo.fields.accrued_spread_fees));
     return totalSuiStaked.div(10 ** 9).toString();
   } catch (error) {
     console.log("error", error);
@@ -148,8 +147,7 @@ export const fetchTotalSuiStaked = async (
 
 export const fetchCurrentStSuiEpoch = async () => {
   try {
-    const currentEpoch = (await getSuiClient().getLatestSuiSystemState()).epoch;
-    return currentEpoch;
+    return await getCurrentEpoch();
   } catch (error) {
     console.log("error", error);
     return "0";
@@ -219,7 +217,7 @@ export const fetchTotalStakers = async (): Promise<string> => {
   try {
     const meta = await getMeta();
     if (meta) {
-      return meta.content.fields.stakers.fields.size.toString();
+      return meta.fields.stakers.size.toString();
     } else {
       console.error("error: couldnt fetch meta");
       return "0";
@@ -239,7 +237,7 @@ export const updateTotalStakers = async (): Promise<
       throw new Error("error couldnt fetch meta");
     }
     const e = Date.now();
-    const s = Number(meta.content.fields.last_update_event_timestamp) + 1;
+    const s = Number(meta.fields.last_update_event_timestamp) + 1;
     const mintEvents = await Events.getMintEvents({
       startTime: s,
       endTime: e,
@@ -280,7 +278,7 @@ export const getFees = async (
       console.error("couldnt fetch lst info object");
       return;
     }
-    return lstInfo.content.fields.fee_config.fields.element.fields as FeeConfig;
+    return lstInfo.fields.fee_config.element as FeeConfig;
   } catch (e) {
     console.error("error", e);
   }

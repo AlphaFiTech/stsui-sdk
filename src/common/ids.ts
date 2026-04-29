@@ -1,4 +1,7 @@
-const CONF_ENV = "production";
+type ConfEnv = "testing" | "production";
+
+const DEFAULT_CONF_ENV: ConfEnv = "production";
+let confEnv: ConfEnv = DEFAULT_CONF_ENV;
 
 const conf = {
   testing: {
@@ -17,6 +20,13 @@ const conf = {
 
     COLLECTION_FEE_CAP_ID:
       "0x26c607cdbb2063d6eb2900e63c80181f482996d65bf96c986d76c1264099b88a",
+
+    // Meta is currently production-only; keep keys present so config shape
+    // remains stable when switching environments.
+    META_PACKAGE_ID: "",
+    META_ADMIN_CAP: "",
+    META_OBJECT: "",
+    META_UPGRADE_CAP: "",
 
     SUI_SYSTEM_STATE_OBJECT_ID: "0x5",
 
@@ -70,6 +80,14 @@ const conf = {
   },
 };
 
+export function getConfEnv(): ConfEnv {
+  return confEnv;
+}
+
+export function setConf(env: ConfEnv) {
+  confEnv = env;
+}
+
 export function getConf() {
-  return conf[CONF_ENV];
+  return conf[confEnv];
 }

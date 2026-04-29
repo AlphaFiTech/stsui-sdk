@@ -1,15 +1,11 @@
 import { coins } from "./coin/constants.js";
-import { getSuiClient } from "./common/client.js";
+import { getAllBalancesForOwner } from "./common/blockchain.js";
 
 export async function getBalances(
   owner: string,
   tokenNames: string[],
 ): Promise<{ tokenName: string; balance: string }[]> {
-  const suiClient = getSuiClient();
-
-  const allBalances = await suiClient.getAllBalances({
-    owner: owner,
-  });
+  const allBalances = await getAllBalancesForOwner(owner);
   const selectedCoins = Object.values(coins).filter((coin) =>
     tokenNames.includes(coin.name),
   );
@@ -32,9 +28,7 @@ export async function getBalances(
 export async function getAllBalances(
   owner: string,
 ): Promise<{ tokenName: string; balance: string }[]> {
-  const suiClient = getSuiClient();
-
-  const allBalances = await suiClient.getAllBalances({ owner });
+  const allBalances = await getAllBalancesForOwner(owner);
 
   const balances = allBalances.map((balance) => {
     const coin = Object.values(coins).find(

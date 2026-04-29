@@ -6,6 +6,22 @@
 npm i @stsui-sdk
 ```
 
+## v0.1.x — GraphQL migration
+
+Internal Sui reads have moved from JSON-RPC to GraphQL. The public
+class/function APIs (`LST`, `Admin`, `Utils`, `Events`, `mint`,
+`redeem`, `refresh`, etc.) are unchanged. The only breaking type-shape
+change affects direct consumers of `LiquidStakingInfo` / `Meta`, which
+are now flat (no `content.fields.*` wrapping). The legacy JSON-RPC
+helpers (`getMultiObjects`, `getSuiClient`, etc.) keep their original
+shapes and are marked `@deprecated`; a new GraphQL-native
+`multiGetObjectsGraphql(ids)` helper is available for new code. See
+[STSUI_GRAPHQL_MIGRATION.md](STSUI_GRAPHQL_MIGRATION.md) for the
+field-by-field mapping. Override the GraphQL endpoint via the new
+`setGraphQLUrl(url)` helper. By default, GraphQL follows the active SDK
+config network (`production` -> mainnet GraphQL, `testing` -> testnet
+GraphQL).
+
 ## How to create your own liquid staking token
 
 - Write a simple contract to create a coin that will also represent your liquid staking token, stSUI for example.

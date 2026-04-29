@@ -2,9 +2,29 @@ import {
   Transaction,
   TransactionObjectArgument,
 } from "@mysten/sui/transactions";
-import { getConf, getSuiClient, stSuiExchangeRate } from "../index.js";
+import { getConf, stSuiExchangeRate } from "../index.js";
 import { CoinStruct } from "@mysten/sui/client";
 import { Decimal } from "decimal.js";
+import { getCoinsOfType } from "../common/blockchain.js";
+
+async function fetchAllCoinsOfType(
+  owner: string,
+  coinType: string,
+): Promise<CoinStruct[]> {
+  const all: CoinStruct[] = [];
+  let cursor: string | null = null;
+  let hasMore = true;
+  while (hasMore) {
+    const page = await getCoinsOfType(owner, coinType, cursor);
+    all.push(...page.data);
+    if (page.hasNextPage && page.nextCursor) {
+      cursor = page.nextCursor;
+    } else {
+      hasMore = false;
+    }
+  }
+  return all;
+}
 
 export async function redeem(
   lstInfo: string,
@@ -14,31 +34,7 @@ export async function redeem(
 ): Promise<Transaction> {
   const txb = new Transaction();
 
-  let coins: CoinStruct[] = [];
-
-  let currentCursor: string | null | undefined = null;
-
-  do {
-    const response = await getSuiClient().getCoins({
-      owner: address,
-      coinType: lstCoinType,
-      cursor: currentCursor,
-    });
-
-    coins = coins.concat(response.data);
-
-    // Check if there's a next page
-    if (response.hasNextPage && response.nextCursor) {
-      currentCursor = response.nextCursor;
-    } else {
-      // No more pages available
-      // console.log("No more receipts available.");
-      break;
-    }
-  } while (
-    //eslint-disable-next-line no-constant-condition
-    true
-  );
+  const coins = await fetchAllCoinsOfType(address, lstCoinType);
 
   if (coins.length == 0) {
     throw new Error("No coin");
@@ -76,30 +72,9 @@ export async function redeemTx(
 }> {
   if (!txb) txb = new Transaction();
 
-  let coins: CoinStruct[] = [];
-
-  let currentCursor: string | null | undefined = null;
-
-  do {
-    const response = await getSuiClient().getCoins({
-      owner: options.address,
-      coinType: getConf().STSUI_COIN_TYPE,
-      cursor: currentCursor,
-    });
-
-    coins = coins.concat(response.data);
-
-    // Check if there's a next page
-    if (response.hasNextPage && response.nextCursor) {
-      currentCursor = response.nextCursor;
-    } else {
-      // No more pages available
-      // console.log("No more receipts available.");
-      break;
-    }
-  } while (
-    //eslint-disable-next-line no-constant-condition
-    true
+  const coins = await fetchAllCoinsOfType(
+    options.address,
+    getConf().STSUI_COIN_TYPE,
   );
 
   if (coins.length == 0) {

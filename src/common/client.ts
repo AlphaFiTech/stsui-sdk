@@ -1,6 +1,12 @@
 // src/sui-sdk/client.ts
 
-/* This file contains the setup for the Sui Client, implemented as a singleton
+/* This file contains the setup for the Sui Client, implemented as a singleton.
+ *
+ * v0.1.x GraphQL migration: the SDK's internal reads now go through
+ * `src/common/graphql.ts` (`getGraphQLClient`). The legacy SuiClient
+ * accessors below remain for backward compatibility — most importantly
+ * for `Transaction.build()` resolution and for callers that need a
+ * SuiClient for their own purposes — but are marked `@deprecated`.
  */
 
 import {
@@ -10,6 +16,8 @@ import {
   SuiObjectResponse,
 } from "@mysten/sui/client";
 
+export { multiGetObjectsGraphql, type FlatObject } from "./blockchain.js";
+
 // Lazy initialization for the SuiClient instance
 let suiClientInstance: SuiClient | undefined = undefined;
 let suiNodeUrl: string | undefined = undefined;
@@ -17,6 +25,10 @@ let suiNodeUrl: string | undefined = undefined;
 /**
  * Get the current Sui node URL.
  * If no URL has been set, it defaults to the mainnet full node URL.
+ *
+ * @deprecated The SDK no longer uses JSON-RPC for reads. Use the
+ *   GraphQL singleton via `getGraphQLClient()` / `setGraphQLUrl()` for
+ *   new code; this accessor is kept for legacy callers.
  */
 export function getSuiNodeUrl(): string {
   suiNodeUrl = suiNodeUrl ? suiNodeUrl : getFullnodeUrl("mainnet");
@@ -26,6 +38,10 @@ export function getSuiNodeUrl(): string {
 /**
  * Get the SuiClient instance.
  * If a new URL has been set via setSuiNodeUrl, it will create a new instance with the updated URL.
+ *
+ * Still useful internally for `Transaction.build()` and externally for
+ * callers that want to sign/execute transactions; the SDK's read paths
+ * no longer go through this client.
  */
 export function getSuiClient(rpcNodeUrl?: string): SuiClient {
   if (rpcNodeUrl) {
@@ -45,6 +61,10 @@ export function getSuiClient(rpcNodeUrl?: string): SuiClient {
  * This will invalidate the current SuiClient instance, ensuring that
  * the next call to getSuiClient returns a new instance with the updated URL.
  *
+ * @deprecated GraphQL reads use a separate URL — see `setGraphQLUrl()`.
+ *   This setter only affects the legacy SuiClient used for transaction
+ *   signing/building.
+ *
  * @param rpcNodeUrl - The new RPC URL for the Sui client.
  */
 export function setSuiNodeUrl(rpcNodeUrl: string) {
@@ -56,13 +76,10 @@ export function setSuiNodeUrl(rpcNodeUrl: string) {
 
 /**
  * Set a new SuiClient instance with the specified RPC node URL.
- * This function directly creates a new instance of the SuiClient, overriding the existing instance
- * and using the provided URL for future requests.
  *
- * If the RPC node URL is different from the currently stored URL, a new instance of SuiClient will
- * be created and assigned, allowing the client to communicate with a new Sui node.
- *
- * @param rpcNodeUrl - The new RPC URL to be used for the SuiClient.
+ * @deprecated See `setSuiNodeUrl` — this setter only affects the legacy
+ *   SuiClient used for transaction signing/building. Use
+ *   `setGraphQLUrl()` for read endpoints.
  */
 export function setSuiClient(rpcNodeUrl: string) {
   if (suiNodeUrl !== rpcNodeUrl) {
@@ -75,19 +92,27 @@ export function setSuiClient(rpcNodeUrl: string) {
 
 /**
  * Set a custom SuiClient instance.
- * This function directly assigns the provided SuiClient instance to the global variable,
- * allowing for direct manipulation of the client instance.
  *
- * @param suiClient - The custom SuiClient instance to be set.
+ * @deprecated See `setSuiNodeUrl` — only the legacy SuiClient is
+ *   replaced. Use `setGraphQLUrl()` to point reads at a custom endpoint.
  */
 export const setCustomSuiClient = (suiClient: SuiClient) => {
   suiClientInstance = suiClient;
 };
 
+/**
+ * Batch fetch JSON-RPC `SuiObjectResponse` shapes for the given object ids.
+ *
+ * @deprecated v0.1.x of the SDK migrated all internal reads to GraphQL.
+ *   This helper still uses `SuiClient.multiGetObjects` so existing
+ *   callers remain source-compatible. New code should call
+ *   `multiGetObjectsGraphql(ids)` (re-exported from this module), which
+ *   returns the GraphQL-native flat object shape
+ *   `{ objectId, version, digest, type, fields }`.
+ */
 export function getMultiObjects(
   input: MultiGetObjectsParams,
 ): Promise<SuiObjectResponse[]> {
   const suiClient = getSuiClient();
-  const res = suiClient.multiGetObjects(input);
-  return res;
+  return suiClient.multiGetObjects(input);
 }
