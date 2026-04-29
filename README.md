@@ -18,7 +18,9 @@ shapes and are marked `@deprecated`; a new GraphQL-native
 `multiGetObjectsGraphql(ids)` helper is available for new code. See
 [STSUI_GRAPHQL_MIGRATION.md](STSUI_GRAPHQL_MIGRATION.md) for the
 field-by-field mapping. Override the GraphQL endpoint via the new
-`setGraphQLUrl(url)` helper.
+`setGraphQLUrl(url)` helper. By default, GraphQL follows the active SDK
+config network (`production` -> mainnet GraphQL, `testing` -> testnet
+GraphQL).
 
 ## How to create your own liquid staking token
 

@@ -1,4 +1,4 @@
-import type { CoinName, CoinType, Icon, Coin } from "./types.js";
+import type { Coin } from "./types.js";
 import { coins } from "./constants.js";
 import { getAllCoinsForOwner } from "../common/blockchain.js";
 
@@ -29,16 +29,6 @@ export async function getWalletCoins(owner: string): Promise<Coin[]> {
       );
       if (known) {
         out.push(known);
-      } else {
-        // Surface unknown coins with best-effort metadata so callers
-        // get the same coverage GraphQL gives them.
-        const symbol = c.coinType.split("::").pop() ?? c.coinType;
-        out.push({
-          name: symbol as CoinName,
-          type: c.coinType as CoinType,
-          icon: "" as Icon,
-          expo: 0,
-        });
       }
     }
     if (page.hasNextPage && page.nextCursor) {

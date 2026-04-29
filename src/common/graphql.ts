@@ -8,15 +8,24 @@
  */
 
 import { SuiGraphQLClient } from "@mysten/sui/graphql";
+import { getConfEnv } from "./ids.js";
 
-const DEFAULT_GRAPHQL_URL = "https://graphql.mainnet.sui.io/graphql";
+const GRAPHQL_URLS = {
+  production: "https://graphql.mainnet.sui.io/graphql",
+  testing: "https://graphql.testnet.sui.io/graphql",
+} as const;
 
 let graphqlClientInstance: SuiGraphQLClient | undefined = undefined;
 let graphqlUrl: string | undefined = undefined;
+let activeClientUrl: string | undefined = undefined;
 
-/** Get the current GraphQL URL (defaults to mainnet). */
+function getDefaultGraphQLUrl(): string {
+  return GRAPHQL_URLS[getConfEnv()];
+}
+
+/** Get the current GraphQL URL (defaults to active conf network). */
 export function getGraphQLUrl(): string {
-  return graphqlUrl ?? DEFAULT_GRAPHQL_URL;
+  return graphqlUrl ?? getDefaultGraphQLUrl();
 }
 
 /**
@@ -27,10 +36,13 @@ export function getGraphQLClient(url?: string): SuiGraphQLClient {
   if (url && url !== graphqlUrl) {
     setGraphQLUrl(url);
   }
-  if (!graphqlClientInstance) {
+
+  const resolvedUrl = getGraphQLUrl();
+  if (!graphqlClientInstance || activeClientUrl !== resolvedUrl) {
     graphqlClientInstance = new SuiGraphQLClient({
-      url: getGraphQLUrl(),
+      url: resolvedUrl,
     });
+    activeClientUrl = resolvedUrl;
   }
   return graphqlClientInstance;
 }
@@ -40,5 +52,6 @@ export function setGraphQLUrl(url: string) {
   if (graphqlUrl !== url) {
     graphqlUrl = url;
     graphqlClientInstance = undefined;
+    activeClientUrl = undefined;
   }
 }

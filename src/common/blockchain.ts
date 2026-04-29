@@ -415,20 +415,23 @@ export async function queryMoveEvents(
   const client = getGraphQLClient();
 
   const res = await client.query<{
-    events: GqlConnection<{
-      sender: { address: string } | null;
-      timestamp: string | null;
-      sequenceNumber: number | string;
-      transaction: { digest: string | null } | null;
-      contents: { type: { repr: string }; json: unknown };
-    }>;
+    events: {
+      pageInfo: { hasPreviousPage: boolean; startCursor: string | null };
+      nodes: Array<{
+        sender: { address: string } | null;
+        timestamp: string | null;
+        sequenceNumber: number | string;
+        transaction: { digest: string | null } | null;
+        contents: { type: { repr: string }; json: unknown };
+      }>;
+    };
   }>({
     query: /* GraphQL */ `
-      query queryMoveEvents($type: String!, $after: String) {
-        events(filter: { type: $type }, first: 50, after: $after) {
+      query queryMoveEvents($type: String!, $before: String) {
+        events(filter: { type: $type }, last: 50, before: $before) {
           pageInfo {
-            hasNextPage
-            endCursor
+            hasPreviousPage
+            startCursor
           }
           nodes {
             sender {
@@ -449,7 +452,7 @@ export async function queryMoveEvents(
         }
       }
     `,
-    variables: { type: eventType, after: cursor },
+    variables: { type: eventType, before: cursor },
   });
   if (res.errors?.length) {
     throw new Error(
@@ -458,29 +461,34 @@ export async function queryMoveEvents(
   }
 
   const conn = res.data?.events;
-  const data: SuiEvent[] = (conn?.nodes ?? []).map((node) => {
-    const ts = node.timestamp ? Date.parse(node.timestamp) : NaN;
-    const evt = {
-      id: {
-        txDigest: node.transaction?.digest ?? "",
-        eventSeq: String(node.sequenceNumber),
-      },
-      // packageId/transactionModule aren't used by stsui-sdk consumers,
-      // but we fill them best-effort from the type string for shape-parity.
-      packageId: node.contents.type.repr.split("::")[0] ?? "",
-      transactionModule: node.contents.type.repr.split("::")[1] ?? "",
-      sender: node.sender?.address ?? "",
-      type: node.contents.type.repr,
-      parsedJson: node.contents.json,
-      bcs: "",
-      bcsEncoding: "base64",
-      timestampMs: Number.isFinite(ts) ? String(ts) : null,
-    } as SuiEvent;
-    return evt;
-  });
+  // Relay backward pagination (`last/before`) typically yields nodes in
+  // forward order within each page, so reverse to keep legacy
+  // JSON-RPC-compatible descending order (newest first).
+  const data: SuiEvent[] = (conn?.nodes ?? [])
+    .map((node) => {
+      const ts = node.timestamp ? Date.parse(node.timestamp) : NaN;
+      const evt = {
+        id: {
+          txDigest: node.transaction?.digest ?? "",
+          eventSeq: String(node.sequenceNumber),
+        },
+        // packageId/transactionModule aren't used by stsui-sdk consumers,
+        // but we fill them best-effort from the type string for shape-parity.
+        packageId: node.contents.type.repr.split("::")[0] ?? "",
+        transactionModule: node.contents.type.repr.split("::")[1] ?? "",
+        sender: node.sender?.address ?? "",
+        type: node.contents.type.repr,
+        parsedJson: node.contents.json,
+        bcs: "",
+        bcsEncoding: "base64",
+        timestampMs: Number.isFinite(ts) ? String(ts) : null,
+      } as SuiEvent;
+      return evt;
+    })
+    .reverse();
   return {
     data,
-    hasNextPage: conn?.pageInfo?.hasNextPage ?? false,
-    nextCursor: conn?.pageInfo?.endCursor ?? null,
+    hasNextPage: conn?.pageInfo?.hasPreviousPage ?? false,
+    nextCursor: conn?.pageInfo?.startCursor ?? null,
   };
 }
