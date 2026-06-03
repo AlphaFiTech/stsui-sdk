@@ -15,6 +15,11 @@ const GRAPHQL_URLS = {
   testing: "https://graphql.testnet.sui.io/graphql",
 } as const;
 
+const GRAPHQL_NETWORKS = {
+  production: "mainnet",
+  testing: "testnet",
+} as const;
+
 let graphqlClientInstance: SuiGraphQLClient | undefined = undefined;
 let graphqlUrl: string | undefined = undefined;
 let activeClientUrl: string | undefined = undefined;
@@ -41,6 +46,7 @@ export function getGraphQLClient(url?: string): SuiGraphQLClient {
   if (!graphqlClientInstance || activeClientUrl !== resolvedUrl) {
     graphqlClientInstance = new SuiGraphQLClient({
       url: resolvedUrl,
+      network: GRAPHQL_NETWORKS[getConfEnv()],
     });
     activeClientUrl = resolvedUrl;
   }
