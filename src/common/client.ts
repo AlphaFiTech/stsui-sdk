@@ -52,6 +52,10 @@ export function getSuiClient(rpcNodeUrl?: string): SuiJsonRpcClient {
     const nodeUrl = getSuiNodeUrl();
     suiClientInstance = new SuiJsonRpcClient({
       url: nodeUrl,
+      // `network` is derived from the active SDK conf env, while `url` may be a
+      // caller-supplied endpoint. A custom URL MUST point at the same network as
+      // the conf env (`production` -> mainnet, otherwise testnet); passing a
+      // mainnet URL while the conf env is `testing` will mislabel the client.
       network: getConfEnv() === "production" ? "mainnet" : "testnet",
     });
   }
@@ -88,6 +92,8 @@ export function setSuiClient(rpcNodeUrl: string) {
     suiNodeUrl = rpcNodeUrl;
     suiClientInstance = new SuiJsonRpcClient({
       url: rpcNodeUrl,
+      // See `getSuiClient`: `network` follows the conf env, so a custom
+      // `rpcNodeUrl` must target the matching network.
       network: getConfEnv() === "production" ? "mainnet" : "testnet",
     });
   }
