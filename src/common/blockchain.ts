@@ -7,7 +7,7 @@
  * `stSui/redeem.ts` calls into these helpers instead of `SuiClient`.
  */
 
-import type { CoinStruct, PaginatedCoins, SuiEvent } from "@mysten/sui/client";
+import type { CoinStruct, PaginatedCoins, SuiEvent } from "@mysten/sui/jsonRpc";
 import { getGraphQLClient } from "./graphql.js";
 
 // ---------------------------------------------------------------------------

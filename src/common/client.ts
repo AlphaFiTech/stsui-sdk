@@ -10,16 +10,17 @@
  */
 
 import {
-  getFullnodeUrl,
+  getJsonRpcFullnodeUrl,
   MultiGetObjectsParams,
-  SuiClient,
+  SuiJsonRpcClient,
   SuiObjectResponse,
-} from "@mysten/sui/client";
+} from "@mysten/sui/jsonRpc";
+import { getConfEnv } from "./ids.js";
 
 export { multiGetObjectsGraphql, type FlatObject } from "./blockchain.js";
 
 // Lazy initialization for the SuiClient instance
-let suiClientInstance: SuiClient | undefined = undefined;
+let suiClientInstance: SuiJsonRpcClient | undefined = undefined;
 let suiNodeUrl: string | undefined = undefined;
 
 /**
@@ -31,7 +32,7 @@ let suiNodeUrl: string | undefined = undefined;
  *   new code; this accessor is kept for legacy callers.
  */
 export function getSuiNodeUrl(): string {
-  suiNodeUrl = suiNodeUrl ? suiNodeUrl : getFullnodeUrl("mainnet");
+  suiNodeUrl = suiNodeUrl ? suiNodeUrl : getJsonRpcFullnodeUrl("mainnet");
   return suiNodeUrl;
 }
 
@@ -43,14 +44,19 @@ export function getSuiNodeUrl(): string {
  * callers that want to sign/execute transactions; the SDK's read paths
  * no longer go through this client.
  */
-export function getSuiClient(rpcNodeUrl?: string): SuiClient {
+export function getSuiClient(rpcNodeUrl?: string): SuiJsonRpcClient {
   if (rpcNodeUrl) {
     setSuiNodeUrl(rpcNodeUrl);
   }
   if (!suiClientInstance) {
     const nodeUrl = getSuiNodeUrl();
-    suiClientInstance = new SuiClient({
+    suiClientInstance = new SuiJsonRpcClient({
       url: nodeUrl,
+      // `network` is derived from the active SDK conf env, while `url` may be a
+      // caller-supplied endpoint. A custom URL MUST point at the same network as
+      // the conf env (`production` -> mainnet, otherwise testnet); passing a
+      // mainnet URL while the conf env is `testing` will mislabel the client.
+      network: getConfEnv() === "production" ? "mainnet" : "testnet",
     });
   }
   return suiClientInstance;
@@ -84,8 +90,11 @@ export function setSuiNodeUrl(rpcNodeUrl: string) {
 export function setSuiClient(rpcNodeUrl: string) {
   if (suiNodeUrl !== rpcNodeUrl) {
     suiNodeUrl = rpcNodeUrl;
-    suiClientInstance = new SuiClient({
+    suiClientInstance = new SuiJsonRpcClient({
       url: rpcNodeUrl,
+      // See `getSuiClient`: `network` follows the conf env, so a custom
+      // `rpcNodeUrl` must target the matching network.
+      network: getConfEnv() === "production" ? "mainnet" : "testnet",
     });
   }
 }
@@ -96,7 +105,7 @@ export function setSuiClient(rpcNodeUrl: string) {
  * @deprecated See `setSuiNodeUrl` — only the legacy SuiClient is
  *   replaced. Use `setGraphQLUrl()` to point reads at a custom endpoint.
  */
-export const setCustomSuiClient = (suiClient: SuiClient) => {
+export const setCustomSuiClient = (suiClient: SuiJsonRpcClient) => {
   suiClientInstance = suiClient;
 };
 

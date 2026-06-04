@@ -3,7 +3,7 @@ import {
   TransactionObjectArgument,
 } from "@mysten/sui/transactions";
 import { getConf, stSuiExchangeRate } from "../index.js";
-import { CoinStruct } from "@mysten/sui/client";
+import { CoinStruct } from "@mysten/sui/jsonRpc";
 import { Decimal } from "decimal.js";
 import { getCoinsOfType } from "../common/blockchain.js";
 

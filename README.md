@@ -6,6 +6,15 @@
 npm i @stsui-sdk
 ```
 
+## v2.0.0 — Mysten Sui v2 / ESM-only
+
+`@mysten/sui` is now a v2 peer dependency (`^2.17.0`), and the package
+ships **ESM only** — the CommonJS build (`dist/cjs`) and the `require`
+export have been dropped. CommonJS consumers doing
+`require('@alphafi/stsui-sdk')` will break; import it from an ESM
+context (or via a bundler) instead, and ensure your app provides
+`@mysten/sui` v2. The `2.0.0` major bump signals these breaking changes.
+
 ## v0.1.x — GraphQL migration
 
 Internal Sui reads have moved from JSON-RPC to GraphQL. The public
