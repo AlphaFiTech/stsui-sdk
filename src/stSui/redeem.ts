@@ -12,12 +12,6 @@ export async function redeem(
   address: string,
 ): Promise<Transaction> {
   const txb = new Transaction();
-  txb.setSender(address);
-
-  // Source the exact stSUI amount from address balance + coin objects. Resolved
-  // at build time via @mysten/sui's coinWithBalance intent, so the tx must be
-  // built with a v2 client (`.core` available) — our SuiJsonRpcClient and the
-  // wallet's dapp-kit client both qualify.
   const stSuiCoin = txb.coin({
     type: lstCoinType,
     balance: BigInt(stSuiAmount),
@@ -33,6 +27,7 @@ export async function redeem(
     typeArguments: [lstCoinType],
   });
   txb.transferObjects([sui], address);
+  txb.setSender(address);
   return txb;
 }
 
@@ -72,8 +67,6 @@ export async function redeemTx(
   const amount_decimal = new Decimal(stSuiAmount);
   const amountOut = amount_decimal.mul(exchangeRate);
   return {
-    // No leftover stSUI coin: coinWithBalance sources the exact amount, so any
-    // unused balance stays in the user's address balance / coin objects.
     tx: txb,
     coinOut: sui,
     remainingLSTCoin: undefined,
