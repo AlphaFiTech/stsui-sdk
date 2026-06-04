@@ -3,28 +3,7 @@ import {
   TransactionObjectArgument,
 } from "@mysten/sui/transactions";
 import { getConf, stSuiExchangeRate } from "../index.js";
-import { CoinStruct } from "@mysten/sui/jsonRpc";
 import { Decimal } from "decimal.js";
-import { getCoinsOfType } from "../common/blockchain.js";
-
-async function fetchAllCoinsOfType(
-  owner: string,
-  coinType: string,
-): Promise<CoinStruct[]> {
-  const all: CoinStruct[] = [];
-  let cursor: string | null = null;
-  let hasMore = true;
-  while (hasMore) {
-    const page = await getCoinsOfType(owner, coinType, cursor);
-    all.push(...page.data);
-    if (page.hasNextPage && page.nextCursor) {
-      cursor = page.nextCursor;
-    } else {
-      hasMore = false;
-    }
-  }
-  return all;
-}
 
 export async function redeem(
   lstInfo: string,
@@ -33,18 +12,16 @@ export async function redeem(
   address: string,
 ): Promise<Transaction> {
   const txb = new Transaction();
+  txb.setSender(address);
 
-  const coins = await fetchAllCoinsOfType(address, lstCoinType);
-
-  if (coins.length == 0) {
-    throw new Error("No coin");
-  }
-  const [coin] = txb.splitCoins(txb.object(coins[0].coinObjectId), [0]);
-  txb.mergeCoins(
-    coin,
-    coins.map((c) => c.coinObjectId),
-  );
-  const [stSuiCoin] = txb.splitCoins(coin, [stSuiAmount]);
+  // Source the exact stSUI amount from address balance + coin objects. Resolved
+  // at build time via @mysten/sui's coinWithBalance intent, so the tx must be
+  // built with a v2 client (`.core` available) — our SuiJsonRpcClient and the
+  // wallet's dapp-kit client both qualify.
+  const stSuiCoin = txb.coin({
+    type: lstCoinType,
+    balance: BigInt(stSuiAmount),
+  });
 
   const [sui] = txb.moveCall({
     target: getConf().STSUI_LATEST_PACKAGE_ID + "::liquid_staking::redeem",
@@ -55,8 +32,7 @@ export async function redeem(
     ],
     typeArguments: [lstCoinType],
   });
-  txb.transferObjects([sui, coin], address);
-  txb.setSender(address);
+  txb.transferObjects([sui], address);
   return txb;
 }
 
@@ -71,21 +47,14 @@ export async function redeemTx(
   amountOut: string;
 }> {
   if (!txb) txb = new Transaction();
+  // coinWithBalance (below) resolves against the tx sender at build time.
+  txb.setSenderIfNotSet(options.address);
 
-  const coins = await fetchAllCoinsOfType(
-    options.address,
-    getConf().STSUI_COIN_TYPE,
-  );
-
-  if (coins.length == 0) {
-    throw new Error("No coin");
-  }
-  const [coin] = txb.splitCoins(txb.object(coins[0].coinObjectId), [0]);
-  txb.mergeCoins(
-    coin,
-    coins.map((c) => c.coinObjectId),
-  );
-  const [stSuiCoin] = txb.splitCoins(coin, [stSuiAmount]);
+  // Source the exact stSUI amount from address balance + coin objects.
+  const stSuiCoin = txb.coin({
+    type: getConf().STSUI_COIN_TYPE,
+    balance: BigInt(stSuiAmount),
+  });
 
   const [sui] = txb.moveCall({
     target: getConf().STSUI_LATEST_PACKAGE_ID + "::liquid_staking::redeem",
@@ -103,9 +72,11 @@ export async function redeemTx(
   const amount_decimal = new Decimal(stSuiAmount);
   const amountOut = amount_decimal.mul(exchangeRate);
   return {
+    // No leftover stSUI coin: coinWithBalance sources the exact amount, so any
+    // unused balance stays in the user's address balance / coin objects.
     tx: txb,
     coinOut: sui,
-    remainingLSTCoin: coin,
+    remainingLSTCoin: undefined,
     amountOut: amountOut.toString(),
   };
 }
