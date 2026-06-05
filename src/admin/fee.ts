@@ -1,5 +1,5 @@
 import { Transaction } from "@mysten/sui/transactions";
-import { getConf } from "../index.js";
+import { getConf, sendCoinToAddressBalance } from "../index.js";
 
 export async function collect_fee(
   lstInfo: string,
@@ -19,7 +19,7 @@ export async function collect_fee(
     ],
     typeArguments: [lstCoinType],
   });
-  txb.transferObjects([sui], address);
+  sendCoinToAddressBalance(txb, getConf().SUI_COIN_TYPE, address, sui);
   return txb;
 }
 export async function updateFee(

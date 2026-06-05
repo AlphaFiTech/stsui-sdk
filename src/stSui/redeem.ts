@@ -2,7 +2,11 @@ import {
   Transaction,
   TransactionObjectArgument,
 } from "@mysten/sui/transactions";
-import { getConf, stSuiExchangeRate } from "../index.js";
+import {
+  getConf,
+  stSuiExchangeRate,
+  sendCoinToAddressBalance,
+} from "../index.js";
 import { Decimal } from "decimal.js";
 
 export async function redeem(
@@ -26,7 +30,7 @@ export async function redeem(
     ],
     typeArguments: [lstCoinType],
   });
-  txb.transferObjects([sui], address);
+  sendCoinToAddressBalance(txb, getConf().SUI_COIN_TYPE, address, sui);
   txb.setSender(address);
   return txb;
 }
