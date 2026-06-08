@@ -17,7 +17,10 @@ export async function mint(
 ): Promise<Transaction> {
   const txb = new Transaction();
 
-  const suiToStake = txb.splitCoins(txb.gas, [sui_amount]);
+  const suiToStake = txb.coin({
+    type: getConf().SUI_COIN_TYPE,
+    balance: BigInt(sui_amount),
+  });
 
   const [coin] = txb.moveCall({
     target: getConf().STSUI_LATEST_PACKAGE_ID + "::liquid_staking::mint",
@@ -36,14 +39,20 @@ export async function mint(
 export async function mintTx(
   sui_amount: string,
   txb: Transaction | undefined = undefined,
+  address: string,
 ): Promise<{
   tx: Transaction;
   coinOut: TransactionObjectArgument | undefined;
   amountOut: string;
 }> {
   if (!txb) txb = new Transaction();
+  // coinWithBalance (below) resolves against the tx sender at build time.
+  txb.setSenderIfNotSet(address);
 
-  const suiToStake = txb.splitCoins(txb.gas, [sui_amount]);
+  const suiToStake = txb.coin({
+    type: getConf().SUI_COIN_TYPE,
+    balance: BigInt(sui_amount),
+  });
 
   const [coin] = txb.moveCall({
     target: getConf().STSUI_LATEST_PACKAGE_ID + "::liquid_staking::mint",
