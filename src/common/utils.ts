@@ -9,9 +9,31 @@ import { Decimal } from "decimal.js";
 import { getLatestPrices } from "../pyth/pyth.js";
 import { bech32 } from "bech32";
 import { Ed25519Keypair } from "@mysten/sui/keypairs/ed25519";
-import { Transaction } from "@mysten/sui/transactions";
+import {
+  Transaction,
+  TransactionObjectArgument,
+} from "@mysten/sui/transactions";
 import { SimpleCache } from "./simpleCache.js";
 import { getCurrentEpoch, getObjectFlat } from "./blockchain.js";
+
+/**
+ * Credit a `Coin<coinType>` to `address`'s address balance (the accumulator)
+ */
+export function sendCoinToAddressBalance(
+  txb: Transaction,
+  coinType: string,
+  address: string,
+  coin: TransactionObjectArgument | string,
+): void {
+  txb.moveCall({
+    target: "0x2::coin::send_funds",
+    typeArguments: [coinType],
+    arguments: [
+      typeof coin === "string" ? txb.object(coin) : coin,
+      txb.pure.address(address),
+    ],
+  });
+}
 
 export async function stSuiExchangeRate(
   lstInfoId: string,
