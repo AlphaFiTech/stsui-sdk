@@ -47,6 +47,10 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      # Tests import from the package root ("..") which resolves to dist/, so build first
+      - name: Build
+        run: npm run build
+
       - name: Run tests
         run: npm run test
 
