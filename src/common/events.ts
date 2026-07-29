@@ -68,7 +68,8 @@ export class Events {
           eventSeq: eve.id.eventSeq,
           type: eve.type,
         } as T;
-        if ("0x" + event.event.typename.name !== params.typeName) {
+        // GraphQL renders Move's TypeName as a plain string (JSON-RPC used {name}).
+        if ("0x" + event.event.typename !== params.typeName) {
           continue;
         }
         if (Number(eve.timestampMs!) > endTime) {

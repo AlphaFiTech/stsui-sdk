@@ -44,9 +44,7 @@ export type CommonEventParams = {
 
 export type EpochChangedEvent = {
   event: {
-    typename: {
-      name: string;
-    };
+    typename: string;
     old_sui_supply: string;
     new_sui_supply: string;
     lst_supply: string;
@@ -61,9 +59,7 @@ export type EpochChangedEvent = {
 
 export type MintEvent = {
   event: {
-    typename: {
-      name: string;
-    };
+    typename: string;
     sui_amount_in: string;
     lst_amount_out: string;
     fee_amount: string;
@@ -77,9 +73,7 @@ export type MintEvent = {
 
 export type RedeemEvent = {
   event: {
-    typename: {
-      name: string;
-    };
+    typename: string;
     lst_amount_in: string;
     sui_amount_out: string;
     fee_amount: string;
@@ -94,9 +88,7 @@ export type RedeemEvent = {
 
 export type FlashStakeEvent = {
   event: {
-    typename: {
-      name: string;
-    };
+    typename: string;
     sui_amount_in: string;
     lst_amount_out: string;
     fee_amount: string;
