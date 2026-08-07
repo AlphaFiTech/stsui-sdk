@@ -1,16 +1,13 @@
-import { exec } from "child_process";
 import { stSuiExchangeRate } from "../src/common/utils.ts";
 import {
   getConf,
   create_lst,
-  set_validators,
+  setValidators as setValidatorsTx,
   mint as mintStsui,
   redeem,
   collect_fee,
   refresh,
-  updateFees,
-  getFees,
-  FeeConfig,
+  updateFee,
   Events,
   fetchStSuiAPR,
   fetchStSuiAPY,
@@ -32,7 +29,7 @@ async function createLst() {
     1,
     600,
     10000,
-    { address },
+    address,
   );
   //   dryRunTransactionBlock(txb);
   executeTransactionBlock(txb);
@@ -41,7 +38,10 @@ async function createLst() {
 //createLst();
 
 async function setValidators() {
-  const txb = await set_validators(
+  const txb = await setValidatorsTx(
+    getConf().LST_INFO,
+    getConf().ADMIN_CAP,
+    getConf().STSUI_COIN_TYPE,
     ["0xcb7efe4253a0fe58df608d8a2d3c0eea94b4b40a8738c8daae4eb77830c16cd7"],
     [100],
   );
@@ -53,7 +53,12 @@ async function setValidators() {
 
 async function mint() {
   const { address } = getExecStuff();
-  const txb = await mintStsui("1000000000", { address });
+  const txb = await mintStsui(
+    getConf().LST_INFO,
+    getConf().STSUI_COIN_TYPE,
+    "1000000000",
+    address,
+  );
   if (txb) {
     // dryRunTransactionBlock(txb);
     executeTransactionBlock(txb);
@@ -63,7 +68,12 @@ async function mint() {
 
 async function redeemstsui() {
   const { address } = getExecStuff();
-  const txb = await redeem("100899000", { address });
+  const txb = await redeem(
+    getConf().LST_INFO,
+    getConf().STSUI_COIN_TYPE,
+    "100899000",
+    address,
+  );
   if (txb) {
     // dryRunTransactionBlock(txb);
     executeTransactionBlock(txb);
@@ -73,7 +83,12 @@ async function redeemstsui() {
 
 async function collectFee() {
   const { address } = getExecStuff();
-  const txb = await collect_fee({ address });
+  const txb = await collect_fee(
+    getConf().LST_INFO,
+    getConf().STSUI_COIN_TYPE,
+    getConf().COLLECTION_FEE_CAP_ID,
+    address,
+  );
   if (txb) {
     executeTransactionBlock(txb);
   }
@@ -81,13 +96,13 @@ async function collectFee() {
 // collectFee();
 
 async function xrate() {
-  console.log(await stSuiExchangeRate());
-  // console.log((await getFees()) as FeeConfig);
+  console.log(await stSuiExchangeRate(getConf().LST_INFO, true));
+  // console.log(await getFees(getConf().LST_INFO, true));
 }
 // xrate();
 
 async function refreshh() {
-  const txb = await refresh();
+  const txb = await refresh(getConf().LST_INFO, getConf().STSUI_COIN_TYPE);
   if (txb) {
     executeTransactionBlock(txb);
     // dryRunTransactionBlock(txb);
@@ -96,7 +111,15 @@ async function refreshh() {
 // refreshh();
 
 async function update_fee() {
-  const txb = await updateFees(0, 2, 1000, 10000);
+  const txb = await updateFee(
+    getConf().LST_INFO,
+    getConf().ADMIN_CAP,
+    getConf().STSUI_COIN_TYPE,
+    0,
+    2,
+    1000,
+    10000,
+  );
   if (txb) {
     dryRunTransactionBlock(txb);
     // executeTransactionBlock(txb);
@@ -108,6 +131,7 @@ async function epochEvents() {
   let ok = await Events.getEpochChangeEvents({
     startTime: 1733776365964,
     endTime: 1733827977386,
+    typeName: getConf().STSUI_COIN_TYPE,
   });
   console.log(ok);
 }
@@ -116,7 +140,7 @@ async function epochEvents() {
 async function apr() {
   console.log(await fetchStSuiAPR(1));
 }
-apr();
+// apr();
 async function apy() {
   console.log(await fetchStSuiAPY(1));
 }
@@ -134,13 +158,14 @@ async function totalStakers() {
 async function fetchTotalStakerss() {
   console.log(await fetchTotalStakers());
 }
-// fetchTotalStakerss()
+fetchTotalStakerss();
 
 async function getRedeemEvents() {
   console.log(
     await Events.getRedeemEvents({
       startTime: 1735660741000,
       endTime: 1735660801000,
+      typeName: getConf().STSUI_COIN_TYPE,
     }),
   );
 }
