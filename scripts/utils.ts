@@ -50,7 +50,15 @@ export function getExecStuff() {
   return { address, keypair, client: getGrpcClient(process.env.NETWORK) };
 }
 
-export async function executeTransactionBlock(txb: Transaction) {
+/**
+ * Signs and submits. Returns false if the transaction threw or executed with a failure.
+ *
+ * A MoveAbort does not throw — it comes back as `$kind: "FailedTransaction"` — so checking only
+ * for exceptions would report a failed run as a success.
+ */
+export async function executeTransactionBlock(
+  txb: Transaction,
+): Promise<boolean> {
   const { keypair, client, address } = getExecStuff();
   txb.setSenderIfNotSet(address);
 
@@ -63,12 +71,25 @@ export async function executeTransactionBlock(txb: Transaction) {
       include: { effects: true, balanceChanges: true },
     });
     console.log(JSON.stringify(res, null, 2));
+
+    if (res.$kind === "FailedTransaction") {
+      console.error(
+        `transaction failed: ${JSON.stringify(res.FailedTransaction.status)}`,
+      );
+      return false;
+    }
+    return true;
   } catch (error) {
     console.error(error);
+    return false;
   }
 }
 
-export async function dryRunTransactionBlock(txb: Transaction, sender?: string) {
+/** Simulates. Returns false if the simulation threw or the transaction would fail. */
+export async function dryRunTransactionBlock(
+  txb: Transaction,
+  sender?: string,
+): Promise<boolean> {
   const { client, address } = getExecStuff();
   txb.setSender(sender ?? address);
 
@@ -80,7 +101,16 @@ export async function dryRunTransactionBlock(txb: Transaction, sender?: string) 
     const tx =
       res.$kind === "Transaction" ? res.Transaction : res.FailedTransaction;
     console.log(tx?.status, tx?.balanceChanges);
+
+    if (res.$kind === "FailedTransaction") {
+      console.error(
+        `simulation failed: ${JSON.stringify(res.FailedTransaction.status)}`,
+      );
+      return false;
+    }
+    return true;
   } catch (error) {
     console.error(error);
+    return false;
   }
 }

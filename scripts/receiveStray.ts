@@ -13,6 +13,7 @@
  * The cap is address-owned, so PK_B64 must be the cap owner's key regardless of RECIPIENT.
  */
 import { Transaction } from "@mysten/sui/transactions";
+import { isValidSuiAddress, normalizeSuiAddress } from "@mysten/sui/utils";
 import { getConf } from "../src/index.ts";
 import {
   dryRunTransactionBlock,
@@ -61,11 +62,32 @@ export function buildReceiveStrayTx(
   return txb;
 }
 
+/**
+ * Sui's BCS address serializer runs normalizeSuiAddress(), which LEFT-PADS rather than
+ * rejecting — a truncated paste like "0x019466989a" becomes the valid, unowned address
+ * 0x00…019466989a, and transferring there is irreversible. isValidSuiAddress requires the full
+ * normalized form, so it rejects exactly those. Callers print the normalized value, never the
+ * raw input.
+ */
+function requireAddress(label: string, value: string): string {
+  if (!isValidSuiAddress(value)) {
+    console.error(
+      `${label} is not a valid Sui address: ${JSON.stringify(value)}\n` +
+        `Expected the full 66-character 0x-prefixed form. Short values are silently ` +
+        `zero-padded into an address nobody owns.`,
+    );
+    process.exit(1);
+  }
+  return normalizeSuiAddress(value);
+}
+
 async function main() {
   const execute = process.argv.includes("--execute");
   const packageId = process.env.PACKAGE_ID ?? getConf().STSUI_LATEST_PACKAGE_ID;
   const { address: signer } = getExecStuff();
-  const recipient = process.env.RECIPIENT ?? signer;
+  const recipient = process.env.RECIPIENT
+    ? requireAddress("RECIPIENT", process.env.RECIPIENT)
+    : signer;
   const client = getGrpcClient();
 
   // Fetched, never hardcoded: receivingRef needs the object's current version and digest.
@@ -133,12 +155,17 @@ async function main() {
     recipient,
   );
 
+  let ok: boolean;
   if (execute) {
     console.log("\nexecuting…");
-    await executeTransactionBlock(txb);
+    ok = await executeTransactionBlock(txb);
   } else {
     console.log("\ndry run (pass --execute to submit):");
-    await dryRunTransactionBlock(txb, signer);
+    ok = await dryRunTransactionBlock(txb, signer);
+  }
+
+  if (!ok) {
+    process.exit(1);
   }
 }
 
