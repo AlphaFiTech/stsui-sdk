@@ -42,9 +42,13 @@ jobs:
       - name: Setup Pages
         uses: actions/configure-pages@v6
       - name: Upload artifact
-        uses: actions/upload-pages-artifact@v3
+        uses: actions/upload-pages-artifact@v5
         with:
           path: "./docs"
+          # v4 stopped putting dotfiles in the tarball by default. TypeDoc
+          # writes .nojekyll into the output dir, so keep hidden files to
+          # upload exactly what v3 did.
+          include-hidden-files: true
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v5
